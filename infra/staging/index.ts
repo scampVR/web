@@ -542,7 +542,6 @@ const service = new awsx.ecs.FargateService("app", {
 
 const autoScalingGroup = cluster.createAutoScalingGroup("gitcoin", {
     templateParameters: { minSize: 2 },
-    launchConfigurationArgs: { instanceType: "t2.medium" },
 });
 
 autoScalingGroup.scaleToTrackMetric("keepAround70Percent", {
