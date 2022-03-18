@@ -551,7 +551,7 @@ autoScalingGroup.scaleInSteps("scale-in-out", {
         lower: [{ value: 30, adjustment: -4 }, { value: 40, adjustment: -2 }],
         upper: [{ value: 70, adjustment: 2 }, { value: 80, adjustment: 4 }]
     },
-};
+});
 
 // Export the URL so we can easily access it.
 export const frontendURL = pulumi.interpolate`http://${listener.endpoint.hostname}/`;
