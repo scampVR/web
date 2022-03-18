@@ -544,10 +544,14 @@ const autoScalingGroup = cluster.createAutoScalingGroup("gitcoin", {
     templateParameters: { minSize: 2 },
 });
 
-autoScalingGroup.scaleToTrackMetric("keepAround70Percent", {
+autoScalingGroup.scaleInSteps("scale-in-out", {
     metric: awsx.ecs.metrics.memoryUtilization({ service, statistic: "Average", unit: "Percent" }),
-    targetValue: 70,
-});
+    adjustmentType: "PercentChangeInCapacity",
+    steps: {
+        lower: [{ value: 30, adjustment: -4 }, { value: 40, adjustment: -2 }],
+        upper: [{ value: 70, adjustment: 2 }, { value: 80, adjustment: 4 }]
+    },
+};
 
 // Export the URL so we can easily access it.
 export const frontendURL = pulumi.interpolate`http://${listener.endpoint.hostname}/`;
