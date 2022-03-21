@@ -505,7 +505,7 @@ let environment = [
 
 ];
 
-const task = new awsx.ecs.FargateTaskDefinition("task", {
+const task = new awsx.ecs.EC2TaskDefinition("task", {
     containers: {
         web: {
             image: dockerGtcWebImage,
@@ -523,10 +523,9 @@ const task = new awsx.ecs.FargateTaskDefinition("task", {
 
 export const taskDefinition = task.taskDefinition.id;
 
-const service = new awsx.ecs.FargateService("app", {
+const service = new awsx.ecs.EC2Service("app", {
     cluster,
     desiredCount: 1,
-    assignPublicIp: false,
     taskDefinitionArgs: {
         containers: {
             web: {
@@ -542,6 +541,7 @@ const service = new awsx.ecs.FargateService("app", {
 
 const autoScalingGroup = cluster.createAutoScalingGroup("gitcoin", {
     templateParameters: { minSize: 2 },
+    launchConfigurationArgs: { instanceType: "t2.medium", associatePublicIpAddress: true },
 });
 
 autoScalingGroup.scaleInSteps("scale-in-out", {
