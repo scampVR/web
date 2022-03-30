@@ -12,6 +12,7 @@ let githubApiToken = pulumi.secret(`${process.env["GITHUB_API_TOKEN"]}`);
 let githubClientId = `${process.env["GITHUB_CLIENT_ID"]}`;
 let githubClientSecret = pulumi.secret(`${process.env["GITHUB_CLIENT_SECRET"]}`);
 let githubAppName = `${process.env["GITHUB_APP_NAME"]}`;
+let datadogKey = `${process.env["DATADOG_KEY"]}`
 
 
 export const dockerGtcWebImage = `${process.env["DOCKER_GTC_WEB_IMAGE"]}`;
@@ -505,7 +506,7 @@ let environment = [
 
 ];
 
-const task = new awsx.ecs.EC2TaskDefinition("task", {
+const task = new awsx.ecs.FargateTaskDefinition("task", {
     containers: {
         web: {
             image: dockerGtcWebImage,
@@ -517,13 +518,26 @@ const task = new awsx.ecs.EC2TaskDefinition("task", {
             dependsOn: [],
             links: []
         },
+        datadog: {
+            image: "public.ecr.aws/datadog/agent:latest",
+            environment: [
+            {
+                name: "DD_API_KEY",
+                value: datadogKey
+            },
+            {
+                name: "ECS_FARGATE",
+                value: "true"
+            }
+            ]
+        },
     },
 });
 
 
 export const taskDefinition = task.taskDefinition.id;
 
-const service = new awsx.ecs.EC2Service("app", {
+const service = new awsx.ecs.FargateService("app", {
     cluster,
     desiredCount: 1,
     taskDefinitionArgs: {
@@ -539,24 +553,17 @@ const service = new awsx.ecs.EC2Service("app", {
     },
 });
 
-const autoScalingGroup = cluster.createAutoScalingGroup("gitcoin", {
-    templateParameters: { minSize: 2 },
-    launchConfigurationArgs: { instanceType: "t2.medium", associatePublicIpAddress: true },
-});
-
-autoScalingGroup.scaleInSteps("scale-in-out", {
-    metric: awsx.ecs.metrics.memoryUtilization({ service, statistic: "Average", unit: "Percent" }),
-    adjustmentType: "PercentChangeInCapacity",
-    steps: {
-        lower: [{ value: 30, adjustment: -4 }, { value: 40, adjustment: -2 }],
-        upper: [{ value: 70, adjustment: 2 }, { value: 80, adjustment: 4 }]
-    },
+const ecsTarget = new aws.appautoscaling.Target("autoscaling_target", {
+    maxCapacity: 10,
+    minCapacity: 1,
+    resourceId: pulumi.interpolate`service/${cluster.cluster.name}/${service.service.name}`,
+    scalableDimension: "ecs:service:DesiredCount",
+    serviceNamespace: "ecs",
 });
 
 // Export the URL so we can easily access it.
 export const frontendURL = pulumi.interpolate`http://${listener.endpoint.hostname}/`;
 export const frontend = listener.endpoint
-
 
 //////////////////////////////////////////////////////////////
 // Set up EC2 instance 
