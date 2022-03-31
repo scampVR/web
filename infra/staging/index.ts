@@ -549,6 +549,20 @@ const service = new awsx.ecs.FargateService("app", {
                 environment: environment,
                 links: []
             },
+            datadog: {
+                image: "public.ecr.aws/datadog/agent:latest",
+                memory: 512,
+                environment: [
+                {
+                    name: "DD_API_KEY",
+                    value: datadogKey
+                },
+                {
+                    name: "ECS_FARGATE",
+                    value: "true"
+                }
+                ]
+            },
         },
     },
 });
