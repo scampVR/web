@@ -14,8 +14,8 @@ let githubClientSecret = pulumi.secret(`${process.env["GITHUB_CLIENT_SECRET"]}`)
 let githubAppName = `${process.env["GITHUB_APP_NAME"]}`;
 let datadogKey = `${process.env["DATADOG_KEY"]}`
 
-let route53ZoneID = `${process.env["STAGING_ENV_ROUTE53_ZONE_ID"]}`;
-let domain = `${process.env["STAGING_ENV_DOMAIN"]}`;
+let route53ZoneID = `${process.env["ROUTE53_ZONE_ID"]}`;
+let domain = `${process.env["DOMAIN"]}`;
 
 let sentryDSN = `${process.env["SENTRY_DSN"]}`;
 
