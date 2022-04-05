@@ -14,6 +14,10 @@ let githubClientSecret = pulumi.secret(`${process.env["GITHUB_CLIENT_SECRET"]}`)
 let githubAppName = `${process.env["GITHUB_APP_NAME"]}`;
 let datadogKey = `${process.env["DATADOG_KEY"]}`
 
+let route53ZoneID = `${process.env["STAGING_ENV_ROUTE53_ZONE_ID"]}`;
+let domain = `${process.env["STAGING_ENV_DOMAIN"]}`;
+
+let sentryDSN = `${process.env["SENTRY_DSN"]}`;
 
 export const dockerGtcWebImage = `${process.env["DOCKER_GTC_WEB_IMAGE"]}`;
 
@@ -247,6 +251,10 @@ let environment = [
     {
         name: "BASE_URL",
         value: "http://127.0.0.1:8000/"
+    },
+    {
+        name: "SENTRY_DSN",
+        value: sentryDSN
     },
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -578,6 +586,14 @@ const ecsTarget = new aws.appautoscaling.Target("autoscaling_target", {
 // Export the URL so we can easily access it.
 export const frontendURL = pulumi.interpolate`http://${listener.endpoint.hostname}/`;
 export const frontend = listener.endpoint
+
+const www = new aws.route53.Record("www", {
+    zoneId: route53ZoneID,
+    name: domain,
+    type: "CNAME",
+    ttl: 300,
+    records: [listener.endpoint.hostname],
+});
 
 //////////////////////////////////////////////////////////////
 // Set up EC2 instance 
