@@ -590,7 +590,7 @@ export const frontend = listener.endpoint
 const www = new aws.route53.Record("www", {
     zoneId: route53Zone,
     name: domain,
-    type: "A",
+    type: "ALIAS",
     ttl: 300,
     records: [listener.endpoint.hostname],
 });
