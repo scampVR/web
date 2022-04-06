@@ -586,7 +586,7 @@ export const frontend = listener.endpoint
 
 const www = new aws.route53.Record("www", {
     zoneId: "Z02840062V9N31F4BX6DJ",
-    name: "staging.gitcoin.co",
+    name: "app.staging.gitcoin.co",
     type: "CNAME",
     ttl: 300,
     records: [listener.endpoint.hostname],
