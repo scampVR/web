@@ -14,6 +14,9 @@ let githubClientSecret = pulumi.secret(`${process.env["GITHUB_CLIENT_SECRET"]}`)
 let githubAppName = `${process.env["GITHUB_APP_NAME"]}`;
 let datadogKey = `${process.env["DATADOG_KEY"]}`
 
+let route53Zone = `${process.env["ROUTE_53_ZONE"]}`;
+let domain = `${process.env["DOMAIN"]}`
+
 let sentryDSN = `${process.env["SENTRY_DSN"]}`;
 
 export const dockerGtcWebImage = `${process.env["DOCKER_GTC_WEB_IMAGE"]}`;
@@ -585,9 +588,9 @@ export const frontendURL = pulumi.interpolate`http://${listener.endpoint.hostnam
 export const frontend = listener.endpoint
 
 const www = new aws.route53.Record("www", {
-    zoneId: "Z02840062V9N31F4BX6DJ",
-    name: "app.staging.gitcoin.co",
-    type: "CNAME",
+    zoneId: route53Zone,
+    name: domain,
+    type: "A",
     ttl: 300,
     records: [listener.endpoint.hostname],
 });

@@ -190,6 +190,9 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DOCKER_GTC_WEB_IMAGE: ${{ needs.build-and-test.outputs.dockerTag }}
           DATADOG_KEY: ${{ secrets.DATADOG_KEY }}
+          ROUTE_53_ZONE: ${{ secrets.ROUTE53_ZONE_ID }}
+          DOMAIN: ${{ DOMAIN }}
+          SENTRY_DSN: ${{ SENTRY_DSN }}
 
       # The static files are already bundled and located in the folder /code/app/static in the container
       - name: Copy static files to bucket
