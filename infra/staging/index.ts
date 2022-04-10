@@ -514,6 +514,21 @@ let environment = [
 
 ];
 
+let dd_environment = [
+    {
+        name: "DD_API_KEY",
+        value: datadogKey
+    },
+    {
+        name: "ECS_FARGATE",
+        value: "true"
+    },
+    {
+        name: "DD_ENV",
+        value: "staging"
+    }
+]
+
 const task = new awsx.ecs.FargateTaskDefinition("task", {
     containers: {
         web: {
@@ -528,16 +543,7 @@ const task = new awsx.ecs.FargateTaskDefinition("task", {
         },
         datadog: {
             image: "public.ecr.aws/datadog/agent:latest",
-            environment: [
-            {
-                name: "DD_API_KEY",
-                value: datadogKey
-            },
-            {
-                name: "ECS_FARGATE",
-                value: "true"
-            }
-            ]
+            environment: dd_environment
         },
     },
 });
@@ -560,16 +566,7 @@ const service = new awsx.ecs.FargateService("app", {
             datadog: {
                 image: "public.ecr.aws/datadog/agent:latest",
                 memory: 512,
-                environment: [
-                {
-                    name: "DD_API_KEY",
-                    value: datadogKey
-                },
-                {
-                    name: "ECS_FARGATE",
-                    value: "true"
-                }
-                ]
+                environment: dd_environment
             },
         },
     },
@@ -591,7 +588,6 @@ const www = new aws.route53.Record("www", {
     zoneId: route53Zone,
     name: domain,
     type: "A",
-    ttl: 300,
     aliases: [{
         name: listener.loadBalancer.loadBalancer.dnsName,
         zoneId: listener.loadBalancer.loadBalancer.zoneId,
