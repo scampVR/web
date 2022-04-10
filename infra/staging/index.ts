@@ -590,9 +590,13 @@ export const frontend = listener.endpoint
 const www = new aws.route53.Record("www", {
     zoneId: route53Zone,
     name: domain,
-    type: "ALIAS",
+    type: "A",
     ttl: 300,
-    records: [listener.endpoint.hostname],
+    aliases: [{
+        name: listener.loadBalancer.loadBalancer.dnsName,
+        zoneId: listener.loadBalancer.loadBalancer.zoneId,
+        evaluateTargetHealth: true,
+    }]
 });
 
 //////////////////////////////////////////////////////////////
