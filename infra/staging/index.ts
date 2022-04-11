@@ -15,7 +15,8 @@ let githubAppName = `${process.env["GITHUB_APP_NAME"]}`;
 let datadogKey = `${process.env["DATADOG_KEY"]}`
 
 let route53Zone = `${process.env["ROUTE_53_ZONE"]}`;
-let domain = `${process.env["DOMAIN"]}`
+let domain = `${process.env["DOMAIN"]}`;
+let baseUrl = `http://${domain}/`;
 
 let sentryDSN = `${process.env["SENTRY_DSN"]}`;
 
@@ -250,7 +251,7 @@ let environment = [
     },
     {
         name: "BASE_URL",
-        value: "http://127.0.0.1:8000/"
+        value: baseUrl
     },
     {
         name: "SENTRY_DSN",
