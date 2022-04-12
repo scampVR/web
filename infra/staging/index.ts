@@ -194,7 +194,31 @@ export const redisCacheOpsConnectionUrl = pulumi.interpolate`redis://${redisPrim
 const cluster = new awsx.ecs.Cluster("gitcoin", { vpc });
 // export const clusterInstance = cluster;
 export const clusterId = cluster.id;
-const listener = new awsx.lb.ApplicationListener("app", { port: 80, vpc: cluster.vpc });
+
+// Generate an SSL certificate
+const certificate = new aws.acm.Certificate("cert", {
+    domainName: domain,
+    tags: {
+      Environment: "staging",
+    },
+    validationMethod: "DNS",
+  });
+
+const certificateValidationDomain = new aws.route53.Record(`${domain}-validation`, {
+    name: certificate.domainValidationOptions[0].resourceRecordName,
+    zoneId: route53Zone,
+    type: certificate.domainValidationOptions[0].resourceRecordType,
+    records: [certificate.domainValidationOptions[0].resourceRecordValue],
+    ttl: 600,
+});
+
+const certificateValidation = new aws.acm.CertificateValidation("certificateValidation", {
+    certificateArn: certificate.arn,
+    validationRecordFqdns: [certificateValidationDomain.fqdn],
+  });
+
+// Create the listener for the application
+const listener = new awsx.lb.ApplicationListener("app", { port: 443, vpc: cluster.vpc, certificateArn: certificateValidation.certificateArn });
 
 
 let environment = [
