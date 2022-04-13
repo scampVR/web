@@ -219,13 +219,55 @@ const certificateValidation = new aws.acm.CertificateValidation("certificateVali
   });
 
 // Create the listener for the application
-const listener = new awsx.lb.ApplicationListener("app", { 
-    port: 443, 
-    protocol: "HTTPS",
-    vpc: cluster.vpc, 
-    certificateArn: certificateValidation.certificateArn 
+// const listener = new awsx.lb.ApplicationListener("app", { 
+//     port: 443, 
+//     protocol: "HTTPS",
+//     vpc: cluster.vpc, 
+//     certificateArn: certificateValidation.certificateArn,
+    
+// });
+
+// Creates an ALB associated with our custom VPC.
+const alb = new awsx.lb.ApplicationLoadBalancer(
+    `gitcoin-service`, { vpc }
+  );
+
+// Listen to HTTP traffic on port 80 and redirect to 443
+const httpListener = alb.createListener("web-listener", {
+    port: 80,
+    protocol: "HTTP",
+    defaultAction: {
+        type: "redirect",
+        redirect: {
+        protocol: "HTTPS",
+        port: "443",
+        statusCode: "HTTP_301",
+        },
+    },
 });
 
+// Target group with the port of the Docker image
+const target = alb.createTargetGroup(
+    "web-target", { vpc, port: 80 }
+);
+
+// Listen to traffic on port 443 & route it through the target group
+const httpsListener = target.createListener("web-listener", {
+    port: 443,
+    certificateArn: certificateValidation.certificateArn
+}); 
+
+// Create a DNS record for the load balancer
+const www = new aws.route53.Record("www", {
+    zoneId: route53Zone,
+    name: domain,
+    type: "A",
+    aliases: [{
+        name: httpsListener.endpoint.hostname,
+        zoneId: httpsListener.loadBalancer.loadBalancer.zoneId,
+        evaluateTargetHealth: true,
+    }]
+});
 
 let environment = [
     {
@@ -556,6 +598,10 @@ let dd_environment = [
     {
         name: "DD_ENV",
         value: "staging"
+    },
+    {
+        name: "DD_TAGS",
+        value: "env:staging"
     }
 ]
 
@@ -566,7 +612,7 @@ const task = new awsx.ecs.FargateTaskDefinition("task", {
             command: ["/bin/review-env-initial-data.bash"],
             memory: 4096,
             cpu: 2000,
-            portMappings: [listener],
+            portMappings: [],
             environment: environment,
             dependsOn: [],
             links: []
@@ -589,7 +635,7 @@ const service = new awsx.ecs.FargateService("app", {
             web: {
                 image: dockerGtcWebImage,
                 memory: 512,
-                portMappings: [listener],
+                portMappings: [httpsListener],
                 environment: environment,
                 links: []
             },
@@ -611,19 +657,10 @@ const ecsTarget = new aws.appautoscaling.Target("autoscaling_target", {
 });
 
 // Export the URL so we can easily access it.
-export const frontendURL = pulumi.interpolate`http://${listener.endpoint.hostname}/`;
-export const frontend = listener.endpoint
+// export const frontendURL = pulumi.interpolate`http://${listener.endpoint.hostname}/`;
+// export const frontend = listener.endpoint
 
-const www = new aws.route53.Record("www", {
-    zoneId: route53Zone,
-    name: domain,
-    type: "A",
-    aliases: [{
-        name: listener.loadBalancer.loadBalancer.dnsName,
-        zoneId: listener.loadBalancer.loadBalancer.zoneId,
-        evaluateTargetHealth: true,
-    }]
-});
+
 
 //////////////////////////////////////////////////////////////
 // Set up EC2 instance 
