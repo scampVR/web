@@ -219,7 +219,12 @@ const certificateValidation = new aws.acm.CertificateValidation("certificateVali
   });
 
 // Create the listener for the application
-const listener = new awsx.lb.ApplicationListener("app", { port: 443, vpc: cluster.vpc, certificateArn: certificateValidation.certificateArn });
+const listener = new awsx.lb.ApplicationListener("app", { 
+    port: 443, 
+    protocol: "HTTPS",
+    vpc: cluster.vpc, 
+    certificateArn: certificateValidation.certificateArn 
+});
 
 
 let environment = [
@@ -561,7 +566,7 @@ const task = new awsx.ecs.FargateTaskDefinition("task", {
             command: ["/bin/review-env-initial-data.bash"],
             memory: 4096,
             cpu: 2000,
-            portMappings: [],
+            portMappings: [listener],
             environment: environment,
             dependsOn: [],
             links: []
