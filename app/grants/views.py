@@ -68,6 +68,7 @@ from dashboard.brightid_utils import get_brightid_status
 from dashboard.models import Activity, HackathonProject, Profile, SearchHistory
 from dashboard.tasks import increment_view_count
 from dashboard.utils import get_web3
+from dashboard.poh_utils import is_valid_eip_1271_signature
 from economy.models import Token
 from economy.utils import convert_token_to_usdt
 from eth_account.messages import defunct_hash_message
@@ -3244,7 +3245,12 @@ def ingest_contributions(request):
         message_hash = defunct_hash_message(text=message)
         recovered_address = w3.eth.account.recoverHash(message_hash, signature=signature)
         if recovered_address.lower() != expected_address.lower():
-            raise Exception("Signature could not be verified")
+            # The signature could still be valid if the wallet is a contract and supports EIP-1271
+            logger.info("Signatures didn't match from recoverHash(), trying EIP-1271 support")
+            if not is_valid_eip_1271_signature(w3, w3.toChecksumAddress(expected_address), message_hash, signature):
+                raise Exception("Signature could not be verified")
+            else:
+                logger.info("EIP-1271 signature verified")
 
     try:
         if txHash != '':
@@ -3509,12 +3515,18 @@ def ingest_contributions(request):
                 # Skip if this is not a transfer (can be Deposit, ChangePubKey, etc.)
                 if transaction["tx"]["type"] != "Transfer":
                     continue
+                symbol = transaction["tx"]["token"]
+                token_instance = Token.objects.filter(network=network, symbol=symbol, approved=True).first()
+                if not token_instance:
+                    logger.info("Skipping unknown token " + symbol)
+                    continue
 
                 # Extract contribution parameters from the JSON
                 symbol = transaction["tx"]["token"]
                 value = transaction["tx"]["amount"]
                 token = Token.objects.filter(network=network, symbol=transaction["tx"]["token"],
                                              approved=True).first().to_dict
+                token = token_instance.to_dict
                 decimals = token["decimals"]
                 symbol = token["name"]
                 value_adjusted = int(value) / 10 ** int(decimals)
