@@ -4311,6 +4311,9 @@ def new_hackathon_bounty(request, hackathon=''):
     except HackathonEvent.DoesNotExist:
         return redirect(reverse('get_hackathons'))
 
+    if hackathon_event.is_expired():
+        return redirect(reverse('hackathon_onboard', args=(hackathon_event.slug,)))
+    
     bounty_params = {
         'newsletter_headline': _('Be the first to know about new funded issues.'),
         'issueURL': clean_bounty_url(request.GET.get('source') or request.GET.get('url', '')),
@@ -6347,7 +6350,24 @@ def fulfill_bounty_v1(request):
     if payout_type == 'fiat' and not fulfiller_identifier:
         response['message'] = 'error: missing fulfiller_identifier'
         return JsonResponse(response)
-    elif payout_type in ['qr', 'polkadot_ext', 'harmony_ext', 'binance_ext', 'rsk_ext', 'xinfin_ext', 'nervos_ext', 'algorand_ext', 'sia_ext', 'tezos_ext', 'casper_ext'] and not fulfiller_address:
+    elif (
+        payout_type
+        in [
+            "qr",
+            "polkadot_ext",
+            "harmony_ext",
+            "binance_ext",
+            "rsk_ext",
+            "xinfin_ext",
+            "nervos_ext",
+            "algorand_ext",
+            "sia_ext",
+            "tezos_ext",
+            "casper_ext",
+            "cosmos_ext",
+        ]
+        and not fulfiller_address
+    ):
         response['message'] = 'error: missing fulfiller_address'
         return JsonResponse(response)
 
@@ -6466,8 +6486,33 @@ def payout_bounty_v1(request, fulfillment_id):
     if not payout_type:
         response['message'] = 'error: missing parameter payout_type'
         return JsonResponse(response)
-    if payout_type not in ['fiat', 'qr', 'web3_modal', 'polkadot_ext', 'harmony_ext' , 'binance_ext', 'rsk_ext', 'xinfin_ext', 'nervos_ext', 'algorand_ext', 'sia_ext', 'tezos_ext', 'casper_ext', 'manual']:
-        response['message'] = 'error: parameter payout_type must be fiat / qr / web_modal / polkadot_ext / harmony_ext / binance_ext / rsk_ext / xinfin_ext / nervos_ext / algorand_ext / sia_ext / tezos_ext / casper_ext / manual'
+
+    if (
+        payout_type
+        not in [
+            'fiat',
+            'qr',
+            'web3_modal',
+            'polkadot_ext',
+            'harmony_ext' ,
+            'binance_ext',
+            'rsk_ext',
+            'xinfin_ext',
+            'nervos_ext',
+            'algorand_ext',
+            'sia_ext',
+            'tezos_ext',
+            'casper_ext',
+            'cosmos_ext',
+            'manual'
+        ]
+    ):
+        response['message'] = (
+            'error: parameter payout_type must be fiat / qr / web_modal / '
+            'polkadot_ext / harmony_ext / binance_ext / rsk_ext / xinfin_ext / '
+            'nervos_ext / algorand_ext / sia_ext / tezos_ext / casper_ext / '
+            'cosmos_ext / manual'
+        )
         return JsonResponse(response)
     if payout_type == 'manual' and not bounty.event:
         response['message'] = 'error: payout_type manual is eligible only for hackathons'
@@ -6533,7 +6578,24 @@ def payout_bounty_v1(request, fulfillment_id):
         fulfillment.save()
         record_bounty_activity(bounty, user, 'worker_paid', None, fulfillment)
 
-    elif payout_type in ['qr', 'web3_modal', 'polkadot_ext', 'harmony_ext', 'binance_ext', 'rsk_ext', 'xinfin_ext', 'nervos_ext', 'algorand_ext', 'sia_ext', 'tezos_ext', 'casper_ext']:
+    elif (
+        payout_type
+        in [
+            'qr',
+            'web3_modal',
+            'polkadot_ext',
+            'harmony_ext',
+            'binance_ext',
+            'rsk_ext',
+            'xinfin_ext',
+            'nervos_ext',
+            'algorand_ext',
+            'sia_ext',
+            'tezos_ext',
+            'casper_ext',
+            'cosmos_ext'
+        ]
+    ):
         fulfillment.payout_status = 'pending'
         fulfillment.save()
         sync_payout(fulfillment)
@@ -6557,6 +6619,9 @@ def reverse_proxy_rpc_v1(request, tenant):
     if tenant.upper() == 'CASPER':
         # casper
         url = 'http://3.142.224.108:7777/rpc'
+    elif tenant.upper() == 'COSMOS':
+        # cosmos
+        url = 'https://rpc.cosmos.network'
     else:
         return JsonResponse({'error': 'invalid tenant'}, status=400)
 
@@ -7315,8 +7380,9 @@ def export_grants_ethelo(request):
     end_grant = request.GET.get('end_grant_number')
     end_grant = int(end_grant) if len(end_grant) > 0 else None
     inactive_only = bool(request.GET.get('inactive_only'))
+    flagged_only = bool(request.GET.get('flagged_only'))
 
-    grants_dict = ethelo.get_grants_from_database(start_grant, end_grant, inactive_only)
+    grants_dict = ethelo.get_grants_from_database(start_grant, end_grant, inactive_only, flagged_only)
 
     json_str = json.dumps(grants_dict)
     response = HttpResponse(json_str, content_type='application/json')

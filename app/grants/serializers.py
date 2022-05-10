@@ -12,8 +12,6 @@ from .models import (
 from .utils import amount_in_wei, get_converted_amount
 
 
-
-
 class TokenSerializer(FlexFieldsModelSerializer):
     class Meta:
         model = Token
@@ -55,7 +53,7 @@ class CLRMatchSerializer(FlexFieldsModelSerializer):
     class Meta:
         model = CLRMatch
         fields = (
-            'pk', 'amount', 'round_number', 'claim_tx', 'grant_payout', 'ready_for_payout', 'merkle_claim'
+            'pk', 'amount', 'token_amount', 'round_number', 'claim_tx', 'grant_payout', 'ready_for_payout', 'merkle_claim'
         )
 
 
@@ -67,7 +65,7 @@ class GrantSerializer(FlexFieldsModelSerializer):
     admin_profile = ProfileSerializer()
     team_members = ProfileSerializer(many=True)
     clr_matches = CLRMatchSerializer(
-        fields=['pk', 'amount', 'round_number', 'claim_tx', 'grant_payout', 'ready_for_payout', 'merkle_claim'],
+        fields=['pk', 'amount', 'token_amount', 'round_number', 'claim_tx', 'grant_payout', 'ready_for_payout', 'merkle_claim'],
         many=True
     )
 
